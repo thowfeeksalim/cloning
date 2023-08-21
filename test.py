@@ -7,7 +7,7 @@ def mask_sensitive_data(record, sensitive_fields):
     masked_record = record.copy()
     for field in sensitive_fields:
         if field in masked_record:
-            masked_record[field] = '*********'  # Mask sensitive data
+            masked_record[field] = '*********' 
     return masked_record
 
 def anonymize_data(input_filename, output_filename, sensitive_fields):
@@ -22,10 +22,10 @@ def anonymize_data(input_filename, output_filename, sensitive_fields):
         json.dump(data, file, indent=4)
 
 def main():
-    source_uri = "mongodb://127.0.0.1:4001"  # Replace with your source MongoDB URI
-    destination_uri = "mongodb://127.0.0.1:4002"  # Replace with your destination MongoDB URI
-    sensitive_fields = ['name','address', 'birthdate', 'email', 'accounts', 'tier_and_details', 'active']
-    output_folder = "exported_data"  # Folder to store exported JSON files
+    source_uri = "mongodb://127.0.0.1:4001"  
+    destination_uri = "mongodb://127.0.0.1:4002"  
+    sensitive_fields = ['gst_id','name','address', 'birthdate', 'email', 'accounts', 'tier_and_details', 'active']
+    output_folder = "exported_data" 
     
     # Create the output folder if it doesn't exist
     if not os.path.exists(output_folder):
