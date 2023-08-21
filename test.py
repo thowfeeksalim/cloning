@@ -1,0 +1,84 @@
+import subprocess
+import json
+from pymongo import MongoClient
+import os
+
+def mask_sensitive_data(record, sensitive_fields):
+    masked_record = record.copy()
+    for field in sensitive_fields:
+        if field in masked_record:
+            masked_record[field] = '*********'  # Mask sensitive data
+    return masked_record
+
+def anonymize_data(input_filename, output_filename, sensitive_fields):
+    data = []
+    with open(input_filename, 'r') as file:
+        for line in file:
+            record = json.loads(line)
+            masked_record = mask_sensitive_data(record, sensitive_fields)
+            data.append(masked_record)
+    
+    with open(output_filename, 'w') as file:
+        json.dump(data, file, indent=4)
+
+def main():
+    source_uri = "mongodb://127.0.0.1:4001"  # Replace with your source MongoDB URI
+    destination_uri = "mongodb://127.0.0.1:4002"  # Replace with your destination MongoDB URI
+    sensitive_fields = ['name','address', 'birthdate', 'email', 'accounts', 'tier_and_details', 'active']
+    output_folder = "exported_data"  # Folder to store exported JSON files
+    
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    # Connect to the source MongoDB
+    source_client = MongoClient(source_uri)
+    
+    # Connect to the destination MongoDB
+    destination_client = MongoClient(destination_uri)
+    
+    # Get a list of databases
+    source_databases = source_client.list_database_names()
+    
+    # Export data from all databases and collections
+    for database_name in source_databases:
+        source_database = source_client[database_name]
+        destination_database = destination_client[database_name]
+        
+        collection_names = source_database.list_collection_names()
+        for collection_name in collection_names:
+            output_file = f"{output_folder}/{database_name}_{collection_name}_anonymized.json"
+            
+            # Skip exporting if the anonymized file already exists
+            if os.path.exists(output_file):
+                continue
+            
+            export_command = [
+                "mongoexport",
+                "--uri", source_uri,
+                "--collection", collection_name,
+                "--db", database_name,
+                "--out", output_file
+            ]
+            subprocess.run(" ".join(export_command), shell=True)
+            
+            # Anonymize data
+            anonymize_data(output_file, output_file, sensitive_fields)
+    
+    # Import all anonymized JSON files into the destination MongoDB
+    anonymized_files = [f for f in os.listdir(output_folder) if f.endswith("_anonymized.json")]
+    for file in anonymized_files:
+        database_name, collection_name = file.replace("_anonymized.json", "").split("_", 1)
+        import_command = [
+            "mongoimport",
+            "--uri", destination_uri,
+            "--collection", collection_name,
+            "--db", database_name,
+            "--file", f"{output_folder}/{file}",
+            "--jsonArray",
+            "--quiet"
+        ]
+        subprocess.run(" ".join(import_command), shell=True)
+
+if __name__ == '__main__':
+    main()
