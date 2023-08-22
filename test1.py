@@ -4,33 +4,33 @@ import random
 from pymongo import MongoClient
 import os
 
-def generate_fake_data(field, index):
+def generate_fake_data(field):
     if field == "name":
-        return f"User{index}"
+        return f"User{random.randint(1000, 9999)}"
     elif field == "email":
-        return f"user{index}@example.com"
+        return f"user{random.randint(1000, 9999)}@example.com"
     elif field == "gst_id":
-        return f"{100000 + index}"
+        return f"{random.randint(100000, 999999)}"
     elif field == "address":
-        return f"Address{index}"
+        return f"Address{random.randint(1000, 9999)}"
     elif field == "birthdate":
-        return f"01-01-2000"
+        return f"01-01-2000"  
     elif field == "accounts":
-        return [{"account_id": str(index * 2 + i)} for i in range(2)]
+        return [{"account_id": str(random.randint(1000, 9999))} for _ in range(2)]
     elif field == "tier_and_details":
-        return {"tier": f"Tier{index % 3 + 1}", "details": f"Details{index}"}
+        return {"tier": f"Tier{random.randint(1, 3)}", "details": f"Details{random.randint(1000, 9999)}"}
     elif field == "active":
-        return bool(index % 2)
+        return random.choice([True, False])
 
 def anonymize_data(input_filename, output_filename, sensitive_fields):
     data = []
     with open(input_filename, 'r') as file:
-        for index, line in enumerate(file):
+        for line in file:
             record = json.loads(line)
             masked_record = record.copy()
             for field in sensitive_fields:
                 if field in masked_record:
-                    masked_record[field] = generate_fake_data(field, index)
+                    masked_record[field] = generate_fake_data(field)
             data.append(masked_record)
     
     with open(output_filename, 'w') as file:
@@ -76,6 +76,7 @@ def main():
                 "--out", output_file
             ]
             subprocess.run(" ".join(export_command), shell=True)
+            
             
             anonymize_data(output_file, output_file, sensitive_fields)
             
