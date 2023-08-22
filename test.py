@@ -7,7 +7,7 @@ def mask_sensitive_data(record, sensitive_fields):
     masked_record = record.copy()
     for field in sensitive_fields:
         if field in masked_record:
-            masked_record[field] = '*********' 
+            masked_record[field] = '*********'
     return masked_record
 
 def anonymize_data(input_filename, output_filename, sensitive_fields):
@@ -37,14 +37,14 @@ def main():
     # Connect to the destination MongoDB
     destination_client = MongoClient(destination_uri)
     
-    # Get a list of databases
+    # Get a list of databases and collection names from the source MongoDB
     source_databases = source_client.list_database_names()
     
     # Export data from all databases and collections
     for database_name in source_databases:
         source_database = source_client[database_name]
-        destination_database = destination_client[database_name]
         
+        # Get collection names from the source database
         collection_names = source_database.list_collection_names()
         for collection_name in collection_names:
             output_file = f"{output_folder}/{database_name}_{collection_name}_anonymized.json"
@@ -64,21 +64,18 @@ def main():
             
             # Anonymize data
             anonymize_data(output_file, output_file, sensitive_fields)
-    
-    # Import all anonymized JSON files into the destination MongoDB
-    anonymized_files = [f for f in os.listdir(output_folder) if f.endswith("_anonymized.json")]
-    for file in anonymized_files:
-        database_name, collection_name = file.replace("_anonymized.json", "").split("_", 1)
-        import_command = [
-            "mongoimport",
-            "--uri", destination_uri,
-            "--collection", collection_name,
-            "--db", database_name,
-            "--file", f"{output_folder}/{file}",
-            "--jsonArray",
-            "--quiet"
-        ]
-        subprocess.run(" ".join(import_command), shell=True)
+            
+            # Import data into the destination MongoDB using the same names
+            import_command = [
+                "mongoimport",
+                "--uri", destination_uri,
+                "--collection", collection_name,
+                "--db", database_name,
+                "--file", output_file,
+                "--jsonArray",
+                "--quiet"
+            ]
+            subprocess.run(" ".join(import_command), shell=True)
 
 if __name__ == '__main__':
     main()
