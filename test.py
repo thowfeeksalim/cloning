@@ -24,22 +24,28 @@ def generate_fake_data(field, index):
 
 def anonymize_data(input_filename, output_filename, sensitive_fields):
     data = []
-    with open(input_filename, 'r') as file:
+    with open(input_filename, 'r', encoding='utf-8') as file:
         for index, line in enumerate(file):
             record = json.loads(line)
             masked_record = record.copy()
             for field in sensitive_fields:
                 if field in masked_record:
                     masked_record[field] = generate_fake_data(field, index)
-            data.append(masked_record)
+            
+            # Remove fields with null values
+            masked_record = {key: value for key, value in masked_record.items() if value is not None}
+            
+            if masked_record:  # Check if the record is not empty after removing null fields
+                data.append(masked_record)
     
-    with open(output_filename, 'w') as file:
-        json.dump(data, file, indent=4)
+    if data:  # Check if any records are left to save
+        with open(output_filename, 'w') as file:
+            json.dump(data, file, indent=4)
 
 def main():
-    source_uri = "mongodb://127.0.0.1:4001"  
+    source_uri = "mongodb+srv://admin:mypassword@cluster0.0sqlfya.mongodb.net"  
     destination_uri = "mongodb://127.0.0.1:4002"  
-    sensitive_fields = ['gst_id','name','address', 'birthdate', 'email', 'accounts', 'tier_and_details', 'active']
+    sensitive_fields = ['gst_id','name','address', 'birthdate', 'email','account_id']
     output_folder = "exported_data" 
     
     # Create the output folder if it doesn't exist
